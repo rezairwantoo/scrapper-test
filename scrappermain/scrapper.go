@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 
 	"reza/scrapper-test/config"
@@ -20,7 +19,6 @@ func main() {
 
 	// the first pagination URL to scrape
 	pageToScrape := "https://www.tokopedia.com/p/handphone-tablet/handphone?page=1"
-
 	// initializing a Colly instance
 	c := colly.NewCollector()
 	// setting a valid User-Agent header
@@ -29,31 +27,33 @@ func main() {
 	c.OnHTML("[data-testid=lstCL2ProductList]", func(e *colly.HTMLElement) {
 		product := model.CreateRequest{}
 		linkDesc := "for detail please visit " + e.ChildAttr("a[data-testid=lnkProductContainer]", "href")
-		e.ForEach("[data-testid=divProductWrapper]", func(i int, h *colly.HTMLElement) {
-			h.DOM.Each(func(j int, s *goquery.Selection) {
-				image, _ := s.First().Find("img").Attr("src")
-				test := s.Last().Find("span")
-				test.Each(func(k int, l *goquery.Selection) {
-					switch k {
-					case 0:
-						product.Name = l.Text()
+		go func() {
+			e.ForEach("[data-testid=divProductWrapper]", func(i int, h *colly.HTMLElement) {
+				h.DOM.Each(func(j int, s *goquery.Selection) {
+					image, _ := s.First().Find("img").Attr("src")
+					test := s.Last().Find("span")
+					test.Each(func(k int, l *goquery.Selection) {
+						switch k {
+						case 0:
+							product.Name = l.Text()
 
-					case 1:
-						product.Price = l.Text()
+						case 1:
+							product.Price = l.Text()
 
-					case 3:
-						product.MerchantName = l.Text()
+						case 3:
+							product.MerchantName = l.Text()
 
-					case 4:
-						product.ImageLink = image
-						product.Description = linkDesc
-						products = append(products, product)
-						product = model.CreateRequest{}
-					}
+						case 4:
+							product.ImageLink = image
+							product.Description = linkDesc
+							products = append(products, product)
+							product = model.CreateRequest{}
+						}
+					})
 				})
 			})
-		})
-		fmt.Printf("%+v", products)
+		}()
+
 	})
 
 	// visiting the first page
