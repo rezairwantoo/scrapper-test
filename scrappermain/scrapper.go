@@ -26,7 +26,9 @@ func main() {
 	// scraping the product data
 	c.OnHTML("[data-testid=lstCL2ProductList]", func(e *colly.HTMLElement) {
 		product := model.CreateRequest{}
-		linkDesc := "for detail please visit " + e.ChildAttr("a[data-testid=lnkProductContainer]", "href")
+		link := e.ChildAttr("a[data-testid=lnkProductContainer]", "href")
+		linkDesc := "for detail please visit " + link
+		rating := visitDetail(link)
 		go func() {
 			e.ForEach("[data-testid=divProductWrapper]", func(i int, h *colly.HTMLElement) {
 				h.DOM.Each(func(j int, s *goquery.Selection) {
@@ -46,6 +48,7 @@ func main() {
 						case 4:
 							product.ImageLink = image
 							product.Description = linkDesc
+							product.Rating = rating
 							products = append(products, product)
 							product = model.CreateRequest{}
 						}
@@ -71,4 +74,17 @@ func main() {
 	usecaseProducts := usecase.NewProductUsecase(settings.PostgresSQLProvider)
 
 	usecaseProducts.CreateScrapper(ctx, products)
+}
+
+func visitDetail(detailLink string) string {
+	d := colly.NewCollector()
+	rating := ""
+	d.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"
+
+	d.OnHTML("[data-ssr=mainPDPSSR]", func(g *colly.HTMLElement) {
+		rating = g.Attr("[data-testid=lblPDPDetailProductRatingNumber]")
+	})
+
+	d.Visit(detailLink)
+	return rating
 }
